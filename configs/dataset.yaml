@@ -1,0 +1,10 @@
+# Dataset config (Ultralytics format).
+# `path` is resolved relative to THIS file by scripts/common.py, so the project
+# folder can be moved without editing anything.
+path: ../YAOWI.yolov12
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: stemcanker

@@ -1,0 +1,74 @@
+# YOLO26-small, round 2: FINE-TUNE the first model on the label-corrected dataset (v2).
+# Same as configs/train.yaml except the model/data/name block and the schedule/optimizer block.
+# Any key here is a normal Ultralytics train argument; override from the CLI with key=value.
+#
+# How YOLO26 learns its score (ultralytics/utils/tal.py): for every labelled lesion the one-to-one
+# head gets exactly one positive whose classification target = IoU(predicted box, label box).
+# => confidence ~ how tightly the model can reproduce your boxes. Everything below serves that:
+#    fit boxes better, keep label boxes tight, and never train on blended/ambiguous targets.
+
+# ---- model / data -----------------------------------------------------------------------------
+# Start from the round-1 best checkpoint instead of COCO weights: it already knows the lesions and
+# only has to un-learn "unlabelled lesion = background" from the old labels.
+model: runs/train/yolo26s_stemcanker-2/weights/best.pt
+# Same leak-free split as dataset_clean.yaml, plus the 612 reviewed missing lesions
+# (configs/label_fixes_v2.csv) and polygon/duplicate cleanup. Built by scripts/apply_label_fixes.py.
+data: configs/dataset_v2.yaml
+project: runs/train
+name: yolo26s_stemcanker_v2
+
+# ---- resolution -------------------------------------------------------------------------------
+# 22% of train boxes are < 16 px at 640 (median 23 px). Small lesions get low IoU -> low score.
+# 800 enlarges them ~1.25x at ~1.6x compute. Predict at the SAME size you train at.
+imgsz: 800
+batch: 12                       # batch 16 used 7.3 of 8 GB on the RTX 5050 at 800 - too tight
+
+# ---- schedule ---------------------------------------------------------------------------------
+# Round 1 peaked at epoch 103 of 200 from COCO weights; a fine-tune needs fewer epochs. YOLO26 still
+# shifts loss weight from the one-to-many to the one-to-one (inference) head over `epochs`.
+epochs: 100
+patience: 30
+# Explicit AdamW at half of round 1's auto learning rate (0.002): lower, because the weights are
+# already trained. warmup_bias_lr must be 0 with Adam-type optimizers (the 'auto' branch sets this
+# itself, an explicit optimizer doesn't; the default 0.1 would blow up the biases during warmup).
+optimizer: AdamW
+lr0: 0.001
+momentum: 0.9
+warmup_epochs: 1
+warmup_bias_lr: 0.0
+cos_lr: true                    # smooth decay; sharper final convergence than linear
+close_mosaic: 20                # last 20 epochs on real, un-mosaicked images (default 10)
+
+# ---- loss gains -------------------------------------------------------------------------------
+box: 7.5                        # default; better boxes -> higher IoU -> higher score target
+cls: 1.0                        # default 0.5: more gradient to the score branch so it actually
+                                # reaches its IoU target on a small dataset
+dfl: 1.5                        # L1 box term on DFL-free YOLO26
+
+# ---- augmentation -----------------------------------------------------------------------------
+# Keep only augmentations that preserve EXACT boxes. Rotation/shear/perspective turn tight
+# boxes into loose axis-aligned ones (lower IoU target = lower confidence). MixUp/CutMix blend
+# labels and explicitly teach the model to be less sure.
+hsv_h: 0.015                    # tiny hue shift: lesion colour (orange/brown on green) is a key cue
+hsv_s: 0.6
+hsv_v: 0.4                      # field lighting varies a lot
+fliplr: 0.5
+flipud: 0.5                     # stems/lesions have no canonical up; flips keep boxes exact
+degrees: 0.0
+shear: 0.0
+perspective: 0.0
+translate: 0.1
+scale: 0.5
+mosaic: 1.0
+mixup: 0.0
+cutmix: 0.0
+
+# ---- runtime ----------------------------------------------------------------------------------
+workers: 2                      # each Windows worker is a full PyTorch process (~1.3 GB committed) and
+                                # validation starts 2x this many; 6 exhausted the pagefile (error 1455).
+                                # 2 was also faster here: 4 it/s vs 1.2 it/s.
+cache: false                    # images live on the SSD (make_clean_split.py); 'ram' would be copied into
+                                # every dataloader worker
+amp: true
+seed: 0
+plots: true

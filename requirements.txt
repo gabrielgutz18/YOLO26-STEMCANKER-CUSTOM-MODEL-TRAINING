@@ -1,0 +1,6 @@
+# PyTorch must come from the CUDA index (RTX 50-series / Blackwell needs CUDA 12.8+ builds):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# setup_env.ps1 does this for you. Versions below are the ones this project was verified with.
+torch==2.11.0
+torchvision==0.26.0
+ultralytics==8.4.166

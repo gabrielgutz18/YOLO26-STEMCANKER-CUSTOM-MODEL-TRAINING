@@ -1,0 +1,11 @@
+# Plain Ultralytics defaults for YOLO26-small, for an A/B comparison against configs/train.yaml:
+#   python scripts/train.py --config configs/train_baseline.yaml
+#   python scripts/evaluate.py runs/train/yolo26s_baseline/weights/best.pt runs/train/yolo26s_stemcanker/weights/best.pt
+model: weights/yolo26s.pt
+data: configs/dataset_clean.yaml
+project: runs/train
+name: yolo26s_baseline
+imgsz: 640
+batch: 16
+epochs: 100
+workers: 2

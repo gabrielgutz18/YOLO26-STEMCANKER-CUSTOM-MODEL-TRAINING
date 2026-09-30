@@ -1,0 +1,6 @@
+path: C:\Users\Gabriel\datasets\avx-dragonfruit\stemcanker_clean
+train: train/images
+val: valid/images
+test: test/images
+names:
+  0: stemcanker

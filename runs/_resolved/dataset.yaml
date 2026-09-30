@@ -1,0 +1,6 @@
+path: D:\0. GXJ PROJECTS\0. AVX-DRAGONFRUIT\YAOWI.yolov12
+train: train/images
+val: valid/images
+test: test/images
+names:
+  0: stemcanker

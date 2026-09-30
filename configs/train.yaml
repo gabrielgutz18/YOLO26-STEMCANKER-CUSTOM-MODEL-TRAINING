@@ -1,0 +1,64 @@
+# YOLO26-small, tuned for HIGH CONFIDENCE on dragon-fruit stem canker.
+# Any key here is a normal Ultralytics train argument; override from the CLI with key=value.
+#
+# How YOLO26 learns its score (ultralytics/utils/tal.py): for every labelled lesion the one-to-one
+# head gets exactly one positive whose classification target = IoU(predicted box, label box).
+# => confidence ~ how tightly the model can reproduce your boxes. Everything below serves that:
+#    fit boxes better, keep label boxes tight, and never train on blended/ambiguous targets.
+
+# ---- model / data -----------------------------------------------------------------------------
+model: weights/yolo26s.pt      # COCO-pretrained YOLO26-small (auto-downloaded on first run)
+# Leak-free re-split (scripts/make_clean_split.py). The original Roboflow split has near-copies of
+# ~40% of its test images in train, which inflates every score. Original: configs/dataset.yaml
+data: configs/dataset_clean.yaml
+project: runs/train
+name: yolo26s_stemcanker        # re-runs become yolo26s_stemcanker2, 3, ...
+
+# ---- resolution -------------------------------------------------------------------------------
+# 22% of train boxes are < 16 px at 640 (median 23 px). Small lesions get low IoU -> low score.
+# 800 enlarges them ~1.25x at ~1.6x compute. Predict at the SAME size you train at.
+imgsz: 800
+batch: 12                       # batch 16 used 7.3 of 8 GB on the RTX 5050 at 800 - too tight
+
+# ---- schedule ---------------------------------------------------------------------------------
+# Small dataset (1488 imgs): long training matters, and YOLO26 shifts loss weight from the
+# one-to-many to the one-to-one (inference) head over `epochs`, so the o2o head needs the time.
+epochs: 200
+patience: 50
+optimizer: auto                 # -> AdamW(lr=0.002, momentum=0.9) at this dataset size
+cos_lr: true                    # smooth decay; sharper final convergence than linear
+close_mosaic: 20                # last 20 epochs on real, un-mosaicked images (default 10)
+
+# ---- loss gains -------------------------------------------------------------------------------
+box: 7.5                        # default; better boxes -> higher IoU -> higher score target
+cls: 1.0                        # default 0.5: more gradient to the score branch so it actually
+                                # reaches its IoU target on a small dataset
+dfl: 1.5                        # L1 box term on DFL-free YOLO26
+
+# ---- augmentation -----------------------------------------------------------------------------
+# Keep only augmentations that preserve EXACT boxes. Rotation/shear/perspective turn tight
+# boxes into loose axis-aligned ones (lower IoU target = lower confidence). MixUp/CutMix blend
+# labels and explicitly teach the model to be less sure.
+hsv_h: 0.015                    # tiny hue shift: lesion colour (orange/brown on green) is a key cue
+hsv_s: 0.6
+hsv_v: 0.4                      # field lighting varies a lot
+fliplr: 0.5
+flipud: 0.5                     # stems/lesions have no canonical up; flips keep boxes exact
+degrees: 0.0
+shear: 0.0
+perspective: 0.0
+translate: 0.1
+scale: 0.5
+mosaic: 1.0
+mixup: 0.0
+cutmix: 0.0
+
+# ---- runtime ----------------------------------------------------------------------------------
+workers: 2                      # each Windows worker is a full PyTorch process (~1.3 GB committed) and
+                                # validation starts 2x this many; 6 exhausted the pagefile (error 1455).
+                                # 2 was also faster here: 4 it/s vs 1.2 it/s.
+cache: false                    # images live on the SSD (make_clean_split.py); 'ram' would be copied into
+                                # every dataloader worker
+amp: true
+seed: 0
+plots: true
