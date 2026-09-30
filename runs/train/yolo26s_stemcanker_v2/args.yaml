@@ -111,3 +111,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: tracktrack.yaml
+save_dir: D:\0. GXJ PROJECTS\0. AVX-DRAGONFRUIT\runs\train\yolo26s_stemcanker_v2
