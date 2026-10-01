@@ -1,0 +1,7 @@
+# v3 test split + accepted test-audit boxes (runs/test_audit). Generated - do not edit.
+path: C:/Users/Gabriel/datasets/avx-dragonfruit/stemcanker_testaudit
+train: C:/Users/Gabriel/datasets/avx-dragonfruit/stemcanker_v3/train/images
+val: C:/Users/Gabriel/datasets/avx-dragonfruit/stemcanker_v3/valid/images
+test: test/images
+names:
+  0: stemcanker

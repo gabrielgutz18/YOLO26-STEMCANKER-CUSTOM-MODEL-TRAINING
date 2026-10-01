@@ -1,0 +1,20 @@
+# Big-lesion pass (conf 0.1-, longer side >= 10% of image), reviewed against v3 labels.
+# Candidates with conf >= 0.3 were already judged in runs/label_review_v3 and stay rejected here.
+# sheet 00
+8 9 10 11 13 14 15 16 33 34 36 37
+# sheet 01
+40 41 42 43 45 46 48 49 50 51 52 56 57 58 59 60 61 72 76
+# sheet 02
+81 83 87 88 102 103 105 106 107 108 109 112 115
+# sheet 03
+123 126 127 145 146 150 152 153 154 156 158
+# sheet 04
+164 165 175 177 182 185 186
+# sheet 05  (big round holes where the canker dropped out = rejected, same as round 2/3)
+216 219 221 222 230
+# sheet 06
+252 254 255 256
+# sheet 07
+284 289 290 291 293 297 298 302 303 311
+# sheet 08
+326 327 328 329 330 331

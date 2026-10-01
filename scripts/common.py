@@ -17,8 +17,8 @@ def load_yaml(path: str | Path) -> dict:
 
 
 def project_path(p: str | Path) -> Path:
-    """Resolve a path given relative to the project root (absolute paths pass through)."""
-    p = Path(p)
+    """Resolve a path given relative to the project root (absolute and ~ paths pass through)."""
+    p = Path(p).expanduser()
     return p if p.is_absolute() else (ROOT / p).resolve()
 
 

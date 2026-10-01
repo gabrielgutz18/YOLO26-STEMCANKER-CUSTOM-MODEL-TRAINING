@@ -16,6 +16,11 @@ so the same photos stay in train / val / test and old and new models can be comp
 
     python scripts/apply_label_fixes.py
     python scripts/train.py --config configs/train_v2.yaml
+
+Round 3 adds a second review on top of round 2 (see scripts/label_review.py):
+
+    python scripts/apply_label_fixes.py --fixes configs/label_fixes_v2.csv configs/label_fixes_v3.csv
+        --out ~/datasets/avx-dragonfruit/stemcanker_v3 --out-yaml configs/dataset_v3.yaml   (one line)
 """
 
 from __future__ import annotations
@@ -73,7 +78,7 @@ def clean_boxes(rows: list[list[float]], stats: dict) -> list[list[float]]:
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--src", default="~/datasets/avx-dragonfruit/stemcanker_clean", help="output of make_clean_split.py")
-    ap.add_argument("--fixes", default="configs/label_fixes_v2.csv", help="reviewed boxes to add")
+    ap.add_argument("--fixes", nargs="+", default=["configs/label_fixes_v2.csv"], help="reviewed boxes to add (one or more csv)")
     ap.add_argument("--out", default="~/datasets/avx-dragonfruit/stemcanker_v2")
     ap.add_argument("--out-yaml", default="configs/dataset_v2.yaml")
     ap.add_argument("--force", action="store_true", help="run even if a training process is alive")
@@ -87,9 +92,10 @@ def main():
         raise SystemExit(f"{src} not found - run `python scripts/make_clean_split.py` first")
 
     fixes = defaultdict(list)
-    with open(project_path(args.fixes), newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            fixes[(r["split"], r["image"])].append([0, *(float(r[k]) for k in ("xc", "yc", "w", "h"))])
+    for fixes_csv in args.fixes:
+        with open(project_path(fixes_csv), newline="", encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                fixes[(r["split"], r["image"])].append([0, *(float(r[k]) for k in ("xc", "yc", "w", "h"))])
 
     if out.exists():
         shutil.rmtree(out)

@@ -1,0 +1,26 @@
+{
+  "v2": {
+    "0.3": {
+      "tp": 318,
+      "fp_touching": 119,
+      "fp_unlabelled": 112
+    },
+    "0.5": {
+      "tp": 221,
+      "fp_touching": 46,
+      "fp_unlabelled": 34
+    }
+  },
+  "v3": {
+    "0.3": {
+      "tp": 300,
+      "fp_touching": 131,
+      "fp_unlabelled": 105
+    },
+    "0.5": {
+      "tp": 223,
+      "fp_touching": 67,
+      "fp_unlabelled": 43
+    }
+  }
+}

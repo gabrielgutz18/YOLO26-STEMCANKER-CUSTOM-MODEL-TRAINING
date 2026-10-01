@@ -1,0 +1,76 @@
+# YOLO26-small, round 3: FINE-TUNE the v2 model on the round-3 labels (v3).
+# Same as configs/train_v2.yaml except the model/data/name block, the schedule and the runtime block.
+# Any key here is a normal Ultralytics train argument; override from the CLI with key=value.
+#
+# How YOLO26 learns its score (ultralytics/utils/tal.py): for every labelled lesion the one-to-one
+# head gets exactly one positive whose classification target = IoU(predicted box, label box).
+# => confidence ~ how tightly the model can reproduce your boxes. Everything below serves that:
+#    fit boxes better, keep label boxes tight, and never train on blended/ambiguous targets.
+
+# ---- model / data -----------------------------------------------------------------------------
+# v2 best.pt (epoch 22): test mAP50 0.385 on the v2 test labels. Its own proposals were reviewed for
+# round 3, so it only has to stop treating the newly labelled lesions as background.
+model: runs/train/yolo26s_stemcanker_v2/weights/best.pt
+# v2 labels + 565 reviewed lesions in train/val (configs/label_fixes_v3.csv, label_fixes_v3_big.csv).
+# The TEST labels are identical to v2, so the test score is directly comparable to v2's 0.385.
+data: configs/dataset_v3.yaml
+# Run on the C: SSD. In v2, 5 of the 6 crashes happened while last.pt was being written to the D: USB
+# drive. train.py copies the finished run back to runs/train/ on D: (and best.pt -> --save-as).
+project: ~/runs/avx-dragonfruit
+name: yolo26s_stemcanker_v3
+
+# ---- resolution -------------------------------------------------------------------------------
+# 22% of train boxes are < 16 px at 640 (median 23 px). Small lesions get low IoU -> low score.
+# 800 enlarges them ~1.25x at ~1.6x compute. Predict at the SAME size you train at.
+imgsz: 800
+batch: 12                       # batch 16 used 7.3 of 8 GB on the RTX 5050 at 800 - too tight
+
+# ---- schedule ---------------------------------------------------------------------------------
+# v2 (100 epochs) peaked at epoch 22, then val losses rose: the remaining 78 epochs only overfit.
+# 40 epochs keeps the useful part, and cos_lr still reaches the low-LR "settle" phase at the end.
+epochs: 40
+patience: 15
+# Explicit AdamW at half of round 1's auto learning rate (0.002): lower, because the weights are
+# already trained. warmup_bias_lr must be 0 with Adam-type optimizers (the 'auto' branch sets this
+# itself, an explicit optimizer doesn't; the default 0.1 would blow up the biases during warmup).
+optimizer: AdamW
+lr0: 0.001
+momentum: 0.9
+warmup_epochs: 1
+warmup_bias_lr: 0.0
+cos_lr: true                    # smooth decay; sharper final convergence than linear
+close_mosaic: 10                # last 10 epochs on real, un-mosaicked images
+
+# ---- loss gains -------------------------------------------------------------------------------
+box: 7.5                        # default; better boxes -> higher IoU -> higher score target
+cls: 1.0                        # default 0.5: more gradient to the score branch so it actually
+                                # reaches its IoU target on a small dataset
+dfl: 1.5                        # L1 box term on DFL-free YOLO26
+
+# ---- augmentation -----------------------------------------------------------------------------
+# Keep only augmentations that preserve EXACT boxes. Rotation/shear/perspective turn tight
+# boxes into loose axis-aligned ones (lower IoU target = lower confidence). MixUp/CutMix blend
+# labels and explicitly teach the model to be less sure.
+hsv_h: 0.015                    # tiny hue shift: lesion colour (orange/brown on green) is a key cue
+hsv_s: 0.6
+hsv_v: 0.4                      # field lighting varies a lot
+fliplr: 0.5
+flipud: 0.5                     # stems/lesions have no canonical up; flips keep boxes exact
+degrees: 0.0
+shear: 0.0
+perspective: 0.0
+translate: 0.1
+scale: 0.5
+mosaic: 1.0
+mixup: 0.0
+cutmix: 0.0
+
+# ---- runtime ----------------------------------------------------------------------------------
+workers: 1                      # each Windows worker is a full PyTorch process (~1.3 GB committed) and
+                                # validation starts 2x this many. workers=2 ran out of memory at epoch 34
+                                # of v2; workers=1 ran at the same ~37 s/epoch.
+cache: false                    # images live on the SSD (make_clean_split.py); 'ram' would be copied into
+                                # every dataloader worker
+amp: true
+seed: 0
+plots: true

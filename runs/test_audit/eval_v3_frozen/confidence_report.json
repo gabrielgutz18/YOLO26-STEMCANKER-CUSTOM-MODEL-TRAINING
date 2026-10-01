@@ -1,0 +1,22 @@
+{
+  "mAP50": 0.3683885735640711,
+  "mAP50-95": 0.19439340769398933,
+  "images": 170,
+  "gt_lesions": 889,
+  "lesion_conf": 0.24457707657940744,
+  "tp_conf_mean": 0.3834726810455322,
+  "tp_conf_median": 0.32711872458457947,
+  "best_f1": 0.4382227632379793,
+  "best_f1_conf": 0.2,
+  "recall@0.25": 0.3689538807649044,
+  "precision@0.25": 0.5239616613418531,
+  "recall@0.5": 0.2508436445444319,
+  "precision@0.5": 0.6696696696696697,
+  "recall@0.7": 0.12935883014623173,
+  "precision@0.7": 0.8333333333333334,
+  "fp_per_img@0.5": 0.6470588235294118,
+  "weights": "D:\\0. GXJ PROJECTS\\0. AVX-DRAGONFRUIT\\runs\\train\\yolo26s_stemcanker_v3\\weights\\best.pt",
+  "split": "test",
+  "imgsz": 800,
+  "iou_match": 0.5
+}

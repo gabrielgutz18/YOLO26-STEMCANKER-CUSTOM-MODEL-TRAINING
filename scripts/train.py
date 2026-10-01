@@ -5,19 +5,23 @@
     python scripts/train.py --config configs/train_baseline.yaml
     python scripts/train.py --resume runs/train/yolo26s_stemcanker/weights/last.pt
     python scripts/train.py --resume runs/train/yolo26s_stemcanker/weights/last.pt workers=1  # after an OOM crash
+    python scripts/train.py --config configs/train_v3.yaml --save-as weights/dragon.pt
 
 After training, the best checkpoint is evaluated on the *test* split and a
 confidence report is written next to the weights (see evaluate.py).
+--save-as copies best.pt to a fixed name (the run keeps its own best.pt).
+A run whose `project` is outside this folder (e.g. on the C: SSD) is copied back to runs/train/.
 """
 
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 from ultralytics import YOLO
 
-from common import load_yaml, parse_overrides, project_path, resolve_data_yaml
+from common import ROOT, RUNS, load_yaml, parse_overrides, project_path, resolve_data_yaml
 from evaluate import evaluate
 
 
@@ -26,6 +30,7 @@ def main():
     ap.add_argument("--config", default="configs/train.yaml", help="training hyper-parameter yaml")
     ap.add_argument("--resume", metavar="LAST_PT", help="resume an interrupted run from its last.pt")
     ap.add_argument("--no-eval", action="store_true", help="skip the test-set confidence report")
+    ap.add_argument("--save-as", metavar="PT", help="also copy best.pt here when training ends, e.g. weights/dragon.pt")
     ap.add_argument("overrides", nargs="*", metavar="key=value", help="Ultralytics train-arg overrides")
     args = ap.parse_args()
 
@@ -48,8 +53,22 @@ def main():
 
     best = Path(model.trainer.best)
     print(f"\nBest weights: {best}")
+    if args.save_as and best.exists():
+        dst = project_path(args.save_as)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(best, dst)
+        print(f"Copied to:    {dst}")
     if not args.no_eval and best.exists():
         evaluate(best, data=model.trainer.args.data, split="test", imgsz=model.trainer.args.imgsz)
+
+    run_dir = Path(model.trainer.save_dir)
+    if not run_dir.is_relative_to(ROOT):
+        dst = RUNS / "train" / run_dir.name
+        if dst.exists():
+            print(f"{dst} already exists - not copying; the run stays in {run_dir}")
+        else:
+            shutil.copytree(run_dir, dst)
+            print(f"Run copied to {dst}")
 
 
 if __name__ == "__main__":  # required on Windows: dataloader workers re-import this module
